@@ -6,6 +6,8 @@ import (
 	"sync"
 )
 
+// FIFO is a stage runner using first-in first-out
+// fashioned way.
 func FIFO(proc Processor) StageRunner {
 	return &fifo{proc: proc}
 }
@@ -64,6 +66,8 @@ func (f fifo) Run(ctx context.Context, params StageParams) {
 	}
 }
 
+// FixedWorkerPool is a stage runner for running numWorkers
+// of FIFO using proc.
 func FixedWorkerPool(proc ProcessorFunc, numWorkers int) StageRunner {
 	if numWorkers <= 0 {
 		panic("FixedWorkerPool: numWorkers must be > 0")
@@ -100,6 +104,8 @@ func (p *fixedWorkerPool) Run(ctx context.Context, params StageParams) {
 	wg.Wait()
 }
 
+// DynamicWorkerPool is a stage runner where the number of workers
+// dynamically increase on-need to numWorkers at max.
 func DynamicWorkerPool(proc ProcessorFunc, numWorkers int) StageRunner {
 	if numWorkers <= 0 {
 		panic("DynamicWorkerPool: maxWorkers must be > 0")
@@ -112,7 +118,7 @@ func DynamicWorkerPool(proc ProcessorFunc, numWorkers int) StageRunner {
 	}
 
 	return &dynamicWorkerPool{
-		proc: proc,
+		proc:      proc,
 		tokenPool: tokenPool,
 	}
 }
@@ -183,6 +189,9 @@ stop:
 	}
 }
 
+// Broadcast creates a FIFO for len(procs) and broadcasting
+// the payload to individual channel input for the FIFO
+// instance.
 func Broadcast(procs ...Processor) StageRunner {
 
 	if len(procs) == 0 {
@@ -203,7 +212,7 @@ type broadcast struct {
 
 func (b *broadcast) Run(ctx context.Context, params StageParams) {
 	var (
-		wg sync.WaitGroup
+		wg   sync.WaitGroup
 		inCh = make([]chan Payload, len(b.fifos))
 	)
 
@@ -216,7 +225,7 @@ func (b *broadcast) Run(ctx context.Context, params StageParams) {
 			defer wg.Done()
 			fifoParams := &workerParams{
 				stage: params.StageIndex(),
-				inCh: inCh[fifoIndex],
+				inCh:  inCh[fifoIndex],
 				outCh: params.Output(),
 				errCh: params.Error(),
 			}
@@ -236,7 +245,7 @@ done:
 
 			// Send the payloadIn to the input channels
 			// for each runners.
-			for i := len(b.fifos)-1; i >= 0; i-- {
+			for i := len(b.fifos) - 1; i >= 0; i-- {
 				// As each FIFO might modify the payload, to
 				// avoid data races we need to make a copy of
 				// the payload for all FIFOs except the first.

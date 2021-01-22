@@ -13,7 +13,7 @@ import (
 )
 
 func TestStageTest(t *testing.T) {
-	suite.Run(t, &StageTestSuite{t:t})
+	suite.Run(t, &StageTestSuite{t: t})
 }
 
 type StageTestSuite struct {
@@ -31,7 +31,7 @@ func (s *StageTestSuite) TestFIFO() {
 		return stages
 	}
 
-	s.Suite.Run("success", func(){
+	s.Suite.Run("success", func() {
 		stages := makeStages(10)
 
 		src := &sourceStub{data: stringPayloads(3)}
@@ -54,7 +54,7 @@ func (s *StageTestSuite) TestFixedWorkerPool() {
 	syncCh := make(chan struct{})
 	rendezvousCh := make(chan struct{})
 
-	proc := pipeline.ProcessorFunc(func(context.Context, pipeline.Payload)(pipeline.Payload, error){
+	proc := pipeline.ProcessorFunc(func(context.Context, pipeline.Payload) (pipeline.Payload, error) {
 		syncCh <- struct{}{}
 
 		// Wait for other workers to reach this point
@@ -70,7 +70,7 @@ func (s *StageTestSuite) TestFixedWorkerPool() {
 	doneCh := make(chan struct{})
 
 	go func() {
-		err := p.Process(context.TODO(), src,nil)
+		err := p.Process(context.TODO(), src, nil)
 		s.NoError(err)
 		close(doneCh)
 	}()
@@ -81,7 +81,7 @@ func (s *StageTestSuite) TestFixedWorkerPool() {
 	for i := 0; i < numWorkers; i++ {
 		select {
 		case <-syncCh:
-		case <-time.After(time.Second*10):
+		case <-time.After(time.Second * 10):
 			s.Suite.T().Fatalf("timed out waiting for worker %d to reach sync point", i)
 		}
 	}
@@ -89,7 +89,7 @@ func (s *StageTestSuite) TestFixedWorkerPool() {
 	close(rendezvousCh)
 	select {
 	case <-doneCh:
-	case <-time.After(10*time.Second):
+	case <-time.After(10 * time.Second):
 		s.Suite.T().Fatal("timed out waiting for pipeline to complete")
 	}
 
@@ -100,13 +100,13 @@ func (s *StageTestSuite) TestDynamicWorkerPool() {
 	syncCh := make(chan struct{}, numWorker)
 	rendezvousCh := make(chan struct{})
 
-	proc := pipeline.ProcessorFunc(func(ctx context.Context, payload pipeline.Payload)(pipeline.Payload, error){
+	proc := pipeline.ProcessorFunc(func(ctx context.Context, payload pipeline.Payload) (pipeline.Payload, error) {
 		syncCh <- struct{}{}
 		<-rendezvousCh
 		return nil, nil
 	})
 
-	src := &sourceStub{data: stringPayloads(numWorker*2)}
+	src := &sourceStub{data: stringPayloads(numWorker * 2)}
 
 	p := pipeline.New(pipeline.DynamicWorkerPool(proc, numWorker))
 
@@ -156,7 +156,7 @@ func (s *StageTestSuite) TestBroadcast() {
 
 	assertAllProcessed(s.Suite, src.data)
 
-	sort.Slice(expData, func(i, j int)	bool {
+	sort.Slice(expData, func(i, j int) bool {
 		return expData[i].(*stringPayload).val < expData[j].(*stringPayload).val
 	})
 
@@ -168,7 +168,7 @@ func (s *StageTestSuite) TestBroadcast() {
 }
 
 func makeMutatingProcessor(index int) pipeline.Processor {
-	return pipeline.ProcessorFunc(func(ctx context.Context, payload pipeline.Payload)(pipeline.Payload, error){
+	return pipeline.ProcessorFunc(func(ctx context.Context, payload pipeline.Payload) (pipeline.Payload, error) {
 		sp := payload.(*stringPayload)
 		sp.val = fmt.Sprintf("%s_%d", sp.val, index)
 		return payload, nil
@@ -182,4 +182,3 @@ func makePassthroughProcessor() pipeline.Processor {
 		},
 	)
 }
-

@@ -7,14 +7,20 @@ import (
 	"sync"
 )
 
+// New returns a pipeline given on the number of
+// stages provided.
 func New(stages ...StageRunner) *Pipeline {
 	return &Pipeline{stages: stages}
 }
 
+// Pipeline executes the a pipeline on a given
+// stages.
 type Pipeline struct {
 	stages []StageRunner
 }
 
+// Process run the pipeline and takes the payload from the source and
+// send the output to the sink.
 func (p *Pipeline) Process(ctx context.Context, source Source, sink Sink) error {
 	var wg sync.WaitGroup
 	pCtx, ctxCancelFn := context.WithCancel(ctx)
@@ -115,7 +121,7 @@ func sinkWorker(ctx context.Context, sink Sink, inCh <-chan Payload, errChan cha
 	// TODO
 	for {
 		select {
-		case payload, ok := <- inCh:
+		case payload, ok := <-inCh:
 			if !ok {
 				return
 			}
@@ -141,7 +147,7 @@ func maybeEmitError(err error, errCh chan<- error) {
 
 type workerParams struct {
 	stage int
-	inCh <-chan Payload
+	inCh  <-chan Payload
 	outCh chan<- Payload
 	errCh chan<- error
 }

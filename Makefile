@@ -14,6 +14,9 @@ lint: lint-check
 	  	--exclude-use-default=false \
 	  	./...
 
+fmt:
+	go fmt ./...
+
 lint-check:
 	@if [ -z `which golangci-lint` ]; then \
 		echo "[go get] installing golangci-lint";\

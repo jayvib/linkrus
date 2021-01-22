@@ -67,7 +67,6 @@ func (s *sinkStub) Consume(_ context.Context, p pipeline.Payload) error {
 	return s.err
 }
 
-
 type stringPayload struct {
 	processed bool
 	val       string
