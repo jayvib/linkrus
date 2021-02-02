@@ -1,19 +1,20 @@
 package memory
 
 import (
-	"github.com/stretchr/testify/suite"
 	"linkrus/linkgraph/graph/graphtest"
 	"testing"
+
+	gc "gopkg.in/check.v1"
 )
 
-type MemoryTestSuite struct {
+var _ = gc.Suite(new(InMemoryGraphTestSuite))
+
+func Test(t *testing.T) { gc.TestingT(t) }
+
+type InMemoryGraphTestSuite struct {
 	graphtest.SuiteBase
 }
 
-func (m *MemoryTestSuite) SetupTest() {
-	m.SuiteBase.SetGraph(NewInMemoryGraph())
-}
-
-func Test(t *testing.T) {
-	suite.Run(t, new(MemoryTestSuite))
+func (s *InMemoryGraphTestSuite) SetUpTest(c *gc.C) {
+	s.SetGraph(NewInMemoryGraph())
 }
