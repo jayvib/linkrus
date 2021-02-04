@@ -70,6 +70,9 @@ func (l *LinkExtractorTestSuite) assertExtractedLinks(c *gc.C, url, content stri
 	sort.Strings(expLinks)
 	sort.Strings(expNoFollowLinks)
 
+	sort.Strings(p.Links)
+	sort.Strings(p.NoFollowLinks)
+
 	c.Assert(p.Links, gc.DeepEquals, expLinks)
 	c.Assert(p.NoFollowLinks, gc.DeepEquals, expNoFollowLinks)
 }
