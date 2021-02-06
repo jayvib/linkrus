@@ -11,6 +11,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/lib/pq v1.9.0
+	github.com/microcosm-cc/bluemonday v1.0.4
 	github.com/stretchr/testify v1.7.0
 	github.com/tinylib/msgp v1.1.1 // indirect
 	golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa // indirect
