@@ -159,7 +159,7 @@ func (g *GraphUpdaterTestifyMockSuite) Test() {
 			),
 		),
 	).Return()
-
+	_, _, _ = id0, id1, id2
 	out, err := newGraphUpdater(graphMock).Process(context.TODO(), payload)
 	g.Assert().NoError(err)
 
