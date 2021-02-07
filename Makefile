@@ -33,6 +33,12 @@ mockgen-check-deps:
   		GO111MODULE=on go get -u github.com/golang/mock/mockgen@v1.4.4; \
 	fi
 
+mockery-check-deps:
+	@if [ -z `which mockery` ]; then \
+  		echo "[go get] installing mockery"; \
+  		GO111MODULE=on go get -u github.com/vektra/mockery/v2/.../; \
+	fi
+
 ci-check: deps lint run-cdb-migrations test
 
 run-db-migrations: run-cdb-migrations
