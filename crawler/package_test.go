@@ -6,5 +6,6 @@ import (
 )
 
 func Test(t *testing.T) {
+	//logrus.SetLevel(logrus.DebugLevel)
 	gc.TestingT(t)
 }

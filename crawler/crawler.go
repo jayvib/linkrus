@@ -3,6 +3,7 @@ package crawler
 import (
 	"context"
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 	"linkrus/linkgraph/graph"
 	"linkrus/pipeline"
 	"linkrus/textindexer/index"
@@ -38,6 +39,77 @@ type Graph interface {
 
 type Indexer interface {
 	Index(doc *index.Document) error
+}
+
+// Config encapsulates the configuration options for creating a new Crawler.
+type Config struct {
+	// A PrivateNetworkDetector instance
+	PrivateNetworkDetector PrivateNetworkDetector
+
+	// A URLGetter instance for fetching links.
+	URLGetter URLGetter
+
+	// A GraphUpdater instance for adding ne links to the link graph.
+	Graph Graph
+
+	// A TextIndexer instance for indexing the content of each retrieved link.
+	Indexer Indexer
+
+	// The number of concurrent workers used for retrieving links.
+	FetchWorkers int
+}
+
+// Crawler implements a web-page crawling pipeline consisting of the
+// following stages:
+//
+// - Given a URL, retrieve the web-page contents from the remote server.
+// - Extract and resolve absolute and relative links from the retrieved page.
+// - Extract page title and text content from the retrieved page.
+// - Update the link graph: add new links and create edges between the crawled
+//   page and links within it.
+// - Index crawled page title and text content.
+type Crawler struct {
+	p *pipeline.Pipeline
+}
+
+// NewCrawler returns a new crawler instance
+func NewCrawler(cfg Config) *Crawler {
+	return &Crawler{
+		p: assembleCrawlerPipeline(cfg),
+	}
+}
+
+func assembleCrawlerPipeline(cfg Config) *pipeline.Pipeline {
+	return pipeline.New(
+		pipeline.FixedWorkerPool(newLinkFetcher(cfg.URLGetter, cfg.PrivateNetworkDetector), cfg.FetchWorkers),
+		pipeline.FIFO(newLinkExtractor(cfg.PrivateNetworkDetector)),
+		pipeline.FIFO(newTextExtractor()),
+		pipeline.Broadcast(
+			newGraphUpdater(cfg.Graph),
+			newTextIndexer(cfg.Indexer),
+		),
+	)
+}
+
+func (c *Crawler) Crawl(ctx context.Context, linkIt graph.LinkIterator) (int, error) {
+	sink := new(countingSink)
+	err := c.p.Process(ctx, &linkSource{linkIt: linkIt}, sink)
+	return sink.getCount(), err
+}
+
+type countingSink struct {
+	count int
+}
+
+func (s *countingSink) Consume(_ context.Context, p pipeline.Payload) error {
+	payload := p.(*crawlerPayload)
+	logrus.Debug(payload.Links)
+	s.count++
+	return nil
+}
+
+func (s *countingSink) getCount() int {
+	return s.count / 2
 }
 
 type linkSource struct {

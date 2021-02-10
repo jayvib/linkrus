@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"linkrus/linkgraph/graph"
 	"sync"
 	"time"
 

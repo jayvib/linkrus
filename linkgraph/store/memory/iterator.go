@@ -1,5 +1,7 @@
 package memory
 
+import "linkrus/linkgraph/graph"
+
 // linkIterator is a graph.LinkIterator implementation for the in-memory graph.
 type linkIterator struct {
 	s *InMemoryGraph

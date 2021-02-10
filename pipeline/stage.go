@@ -68,7 +68,7 @@ func (f fifo) Run(ctx context.Context, params StageParams) {
 
 // FixedWorkerPool is a stage runner for running numWorkers
 // of FIFO using proc.
-func FixedWorkerPool(proc ProcessorFunc, numWorkers int) StageRunner {
+func FixedWorkerPool(proc Processor, numWorkers int) StageRunner {
 	if numWorkers <= 0 {
 		panic("FixedWorkerPool: numWorkers must be > 0")
 	}

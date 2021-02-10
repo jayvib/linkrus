@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"linkrus/textindexer/index"
 	"sync"
 	"time"
 
