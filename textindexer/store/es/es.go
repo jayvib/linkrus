@@ -12,8 +12,6 @@ import (
 
 	"github.com/google/uuid"
 	"golang.org/x/xerrors"
-
-	"github.com/elastic/go-elasticsearch/v7"
 )
 
 // The name of the elasticsearch index to use.

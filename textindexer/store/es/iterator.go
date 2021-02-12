@@ -1,6 +1,10 @@
 package es
 
-import ()
+import (
+	"linkrus/textindexer/index"
+
+	"github.com/elastic/go-elasticsearch/v7"
+)
 
 // esIterator implements index.Iterator.
 type esIterator struct {
