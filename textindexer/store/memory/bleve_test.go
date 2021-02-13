@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"linkrus/textindexer/index/indextest"
 	"testing"
 
 	gc "gopkg.in/check.v1"
