@@ -8,9 +8,11 @@ import (
 	"github.com/stretchr/testify/suite"
 	"linkrus/pipeline"
 	"testing"
+	"github.com/bradfitz/gomemcache/memcache"
 )
 
 func TestStageTestSuite(t *testing.T) {
+	memcache.New()
 	suite.Run(t, &PipelineTestSuite{t: t})
 }
 
