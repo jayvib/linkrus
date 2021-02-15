@@ -17,7 +17,7 @@ type Queue interface {
 	PendingMessages() bool
 
 	// DiscardMessages drops all pending message from the queue.
-	DiscardMessages() bool
+	DiscardMessages() error
 
 	// Messages returns an iterator for accessing the queued messages.
 	Messages() Iterator

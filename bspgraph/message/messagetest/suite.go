@@ -45,6 +45,20 @@ func (s *Suite) TestEnqueueDequeue(c *gc.C) {
 	c.Assert(iter.Error(), gc.IsNil)
 }
 
+func (s *Suite) TestDiscard(c *gc.C) {
+	// Enqueue the message
+	for i := 0; i < 10; i++ {
+		c.Assert(s.q.Enqueue(msg{payload: fmt.Sprint(i)}), gc.IsNil)
+	}
+
+	// Check if there's pending
+	c.Assert(s.q.PendingMessages(), gc.Equals, true)
+	// Discard message
+	c.Assert(s.q.DiscardMessages(), gc.IsNil)
+	// Check if there's pending
+	c.Assert(s.q.PendingMessages(), gc.Equals, false)
+}
+
 type msg struct {
 	payload string
 }

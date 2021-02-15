@@ -37,8 +37,12 @@ func (i *inMemoryQueue) PendingMessages() bool {
 	return len(i.msgs) > 0
 }
 
-func (i *inMemoryQueue) DiscardMessages() bool {
-	panic("implement me")
+func (i *inMemoryQueue) DiscardMessages() error {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.msgs = i.msgs[:0]
+	i.latchedMsg = nil
+	return nil
 }
 
 func (i *inMemoryQueue) Messages() message.Iterator {
