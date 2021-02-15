@@ -29,6 +29,20 @@ func (s *Suite) TestEnqueueDequeue(c *gc.C) {
 	// Assert if there's a pending messages
 	c.Assert(s.q.PendingMessages(), gc.Equals, true)
 
+	// Expecting the message to be dequeued in reverse order
+	var (
+		iter      = s.q.Messages()
+		processed int
+	)
+
+	for expNext := 9; iter.Next(); expNext-- {
+		got := iter.Message().(msg).payload
+		c.Assert(got, gc.Equals, fmt.Sprint(expNext))
+		processed++
+	}
+
+	c.Assert(processed, gc.Equals, 10)
+	c.Assert(iter.Error(), gc.IsNil)
 }
 
 type msg struct {
@@ -36,5 +50,3 @@ type msg struct {
 }
 
 func (msg) Type() string { return "msg" }
-
-
