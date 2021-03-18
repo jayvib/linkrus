@@ -1,0 +1,56 @@
+syntax = "proto3";
+package product;
+
+import "google/protobuf/any.proto";
+
+option go_package = ".;product";
+
+message Product {
+  int64 id = 1;
+  string name = 2;
+
+  enum Status {
+    ACTIVE = 0;
+    EOL = 1;
+  }
+
+  Status status = 3;
+  Price price = 4;
+
+  // Nested type
+  message Image {
+    string value = 1;
+  }
+
+  repeated Image images = 5;
+
+  google.protobuf.Any supplier = 6;
+
+  oneof type {
+    bool is_main = 7;
+    bool is_accessory = 8;
+  }
+
+  map<int32, string> descriptions = 9;
+}
+
+message Price {
+  int64 id = 1;
+  int64 product_id = 2;
+  sfixed64 amount = 3;
+}
+
+message GetRequest {
+  int64 id = 1;
+}
+
+message GetResponse {
+  oneof result {
+    Product product = 1;
+    string error = 2;
+  }
+}
+
+service ProductService {
+  rpc Get(GetRequest) returns (GetResponse);
+}

@@ -1,0 +1,41 @@
+syntax="proto3";
+package proto;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+message Document {
+  bytes link_id = 1;
+  string url = 2;
+  string title = 3;
+  string content = 4;
+  google.protobuf.Timestamp indexed_at = 5;
+}
+
+message UpdateScoreRequest {
+  bytes link_id = 1;
+  double page_rank_score = 2;
+}
+
+message Query {
+  Type type = 1;
+  string expresion = 2;
+  uint64 offset = 3;
+  enum Type {
+    MATCH = 0;
+    PHRASE = 1;
+  }
+}
+
+message QueryResult {
+  oneof result {
+    uint64 doc_count = 1;
+    Document doc = 2;
+  }
+}
+
+service TextIndexer {
+  rpc Index(Document) returns (Document);
+  rpc UpdateScore(UpdateScoreRequest) returns (google.protobuf.Empty);
+  rpc Search(Query) returns (stream QueryResult);
+}

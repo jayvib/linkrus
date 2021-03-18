@@ -1,0 +1,9 @@
+syntax = "proto3";
+package supplier;
+
+option go_package = ".;supplier";
+
+message Supplier {
+  int64 id = 1;
+  string name = 2;
+}
