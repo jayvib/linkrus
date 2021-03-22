@@ -4,6 +4,8 @@ package proto;
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 
+option go_package = ".;proto";
+
 message Link {
   bytes uuid = 1;
   string url = 2;
