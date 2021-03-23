@@ -27,6 +27,8 @@ message RemoveStaleEdgesQuery {
 message Range {
   bytes from_uuid = 1;
   bytes to_uuid = 2;
+
+  google.protobuf.Timestamp filter = 3;
 }
 
 service LinkGraph {

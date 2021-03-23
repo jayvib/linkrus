@@ -2,10 +2,12 @@ package linkgraphapi_test
 
 import (
 	"context"
+	"fmt"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
 	gc "gopkg.in/check.v1"
+	"io"
 	"linkrus/api/linkgraphapi"
 	"linkrus/api/linkgraphapi/proto"
 	"linkrus/linkgraph/graph"
@@ -159,4 +161,55 @@ func (s *ServerTestSuite) TestUpdateEdge(c *gc.C) {
 
 	// Assert the date. And the res.UpdatedAt must be after the edge.UpdatedAt
 	c.Assert(mustDecodeTimestamp(c, res.UpdatedAt).After(edge.UpdatedAt), gc.Equals, true)
+}
+
+func (s *ServerTestSuite) TestLinks(c *gc.C) {
+
+	// Insert first a link to the graph
+	sawLinks := make(map[uuid.UUID]bool)
+	for i := 0; i < 100; i++ {
+		link := &graph.Link{
+			URL: fmt.Sprintf("http://example.com/%d", i),
+		}
+		c.Assert(s.g.UpsertLink(link), gc.IsNil)
+		sawLinks[link.ID] = false
+	}
+
+	filter := mustEncodeTimestamp(c, time.Now().Add(time.Hour))
+	stream, err := s.cli.Links(
+		context.TODO(),
+		&proto.Range{
+			FromUuid: minUUID[:],
+			ToUuid:   maxUUID[:],
+			Filter:   filter,
+		},
+	)
+	c.Assert(err, gc.IsNil)
+
+	for {
+		next, err := stream.Recv()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			c.Fatal(err)
+		}
+
+		linkID, err := uuid.FromBytes(next.Uuid)
+		c.Assert(err, gc.IsNil)
+
+		alreadySeen, exists := sawLinks[linkID]
+		if !exists {
+			c.Fatalf("saw unexpected link with ID %q", linkID)
+		} else if alreadySeen {
+			c.Fatalf("saw duplicate link with ID %q", linkID)
+		}
+		sawLinks[linkID] = true
+	}
+
+	for linkID, seen := range sawLinks {
+		if !seen {
+			c.Fatalf("expected to see link with ID %q", linkID)
+		}
+	}
 }

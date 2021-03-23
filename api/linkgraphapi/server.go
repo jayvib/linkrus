@@ -73,7 +73,46 @@ func (l *LinkGraphServer) RemoveStaleEdges(ctx context.Context, query *proto.Rem
 }
 
 func (l *LinkGraphServer) Links(r *proto.Range, server proto.LinkGraph_LinksServer) error {
-	panic("implement me")
+	accessedBefore, err := ptypes.Timestamp(r.Filter)
+	if err != nil && r.Filter != nil {
+		return err
+	}
+
+	// Convert the bytes into UUID
+	fromID, err := uuid.FromBytes(r.FromUuid)
+	if err != nil {
+		return err
+	}
+	toID, err := uuid.FromBytes(r.ToUuid)
+	if err != nil {
+		return err
+	}
+
+	it, err := l.g.Links(fromID, toID, accessedBefore)
+	if err != nil {
+		return err
+	}
+
+	defer func() { _ = it.Close() }()
+
+	for it.Next() {
+		link := it.Link()
+		msg := &proto.Link{
+			Uuid:        link.ID[:],
+			Url:         link.URL,
+			RetrievedAt: timeToProto(link.RetrievedAt),
+		}
+
+		if err := server.Send(msg); err != nil {
+			return err
+		}
+	}
+
+	if err := it.Error(); err != nil {
+		return err
+	}
+
+	return it.Close()
 }
 
 func (l *LinkGraphServer) Edges(r *proto.Range, server proto.LinkGraph_EdgesServer) error {
