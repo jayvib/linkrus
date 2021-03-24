@@ -46,6 +46,10 @@ func (l *LinkGraphServer) UpsertLink(_ context.Context, req *proto.Link) (*proto
 		return nil, err
 	}
 
+	req.RetrievedAt = timeToProto(link.RetrievedAt)
+	req.Url = link.URL
+	req.Uuid = link.ID[:]
+
 	return req, nil
 }
 

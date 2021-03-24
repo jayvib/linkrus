@@ -75,6 +75,7 @@ func (s *ServerTestSuite) TestInsertLink(c *gc.C) {
 	}
 	res, err := s.cli.UpsertLink(context.TODO(), req)
 	c.Assert(err, gc.IsNil)
+
 	c.Assert(res.Uuid, gc.Not(gc.DeepEquals), req.Uuid, gc.Commentf("UUID not assigned to new link"))
 	c.Assert(mustDecodeTimestamp(c, res.RetrievedAt), gc.Equals, now)
 }
