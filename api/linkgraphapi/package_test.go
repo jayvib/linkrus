@@ -3,12 +3,14 @@ package linkgraphapi_test
 import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/sirupsen/logrus"
 	gc "gopkg.in/check.v1"
 	"testing"
 	"time"
 )
 
 func Test(t *testing.T) {
+	logrus.SetLevel(logrus.InfoLevel)
 	gc.TestingT(t)
 }
 

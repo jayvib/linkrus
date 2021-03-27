@@ -214,3 +214,110 @@ func (s *ServerTestSuite) TestLinks(c *gc.C) {
 		}
 	}
 }
+
+func (s *ServerTestSuite) TestEdges(c *gc.C) {
+	// Add a link and edges to the graph
+	links := make([]uuid.UUID, 100)
+	for i := 0; i < len(links); i++ {
+		link := &graph.Link{
+			URL: fmt.Sprintf("http://example.com/%d", i),
+		}
+		c.Assert(s.g.UpsertLink(link), gc.IsNil)
+		links[i] = link.ID
+	}
+
+	sawEdges := make(map[uuid.UUID]bool)
+	for i := 0; i < len(links); i++ {
+		edge := &graph.Edge{
+			Src: links[0],
+			Dst: links[i],
+		}
+		c.Assert(s.g.UpsertEdge(edge), gc.IsNil)
+		sawEdges[edge.ID] = false
+	}
+
+	filter := mustEncodeTimestamp(c, time.Now().Add(time.Hour))
+
+	stream, err := s.cli.Edges(context.TODO(), &proto.Range{
+		FromUuid: minUUID[:],
+		ToUuid:   maxUUID[:],
+		Filter:   filter,
+	})
+	c.Assert(err, gc.IsNil)
+
+	// Collect the stream
+	for {
+		next, err := stream.Recv()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			c.Fatal(err)
+		}
+
+		edgeID, err := uuid.FromBytes(next.Uuid)
+		c.Assert(err, gc.IsNil)
+
+		alreadySeen, exists := sawEdges[edgeID]
+		if !exists {
+			c.Fatalf("saw unexpected edges with ID %q", edgeID)
+		} else if alreadySeen {
+			c.Fatalf("saw duplicate edge with ID %q", edgeID)
+		}
+
+		sawEdges[edgeID] = true
+	}
+
+	// Check if there's edges that haven't seen
+	for edgeID, seen := range sawEdges {
+		if !seen {
+			c.Fatalf("expected to see edge with ID %q", edgeID)
+		}
+	}
+}
+
+func (s *ServerTestSuite) TestRetainVersionedEdges(c *gc.C) {
+	// Add three links and two edges to the graph with different versions.
+	src := &graph.Link{URL: "http://example.com"}
+	dst1 := &graph.Link{URL: "http://foo.com"}
+	dst2 := &graph.Link{URL: "http://bar.com"}
+	c.Assert(s.g.UpsertLink(src), gc.IsNil)
+	c.Assert(s.g.UpsertLink(dst1), gc.IsNil)
+	c.Assert(s.g.UpsertLink(dst2), gc.IsNil)
+
+	// Upsert a first edge
+	edge1 := &graph.Edge{Src: src.ID, Dst: dst1.ID}
+	c.Assert(s.g.UpsertEdge(edge1), gc.IsNil)
+
+	// Simulate time-passed-by.
+	time.Sleep(100 * time.Millisecond)
+	t1 := time.Now() // Capture time now
+	edge2 := &graph.Edge{Src: src.ID, Dst: dst2.ID}
+	c.Assert(s.g.UpsertEdge(edge2), gc.IsNil)
+
+	// Do a RemoveStaleEdges request
+	req := &proto.RemoveStaleEdgesQuery{
+		FromUuid:      src.ID[:],
+		UpdatedBefore: mustEncodeTimestamp(c, t1),
+	}
+
+	_, err := s.cli.RemoveStaleEdges(context.TODO(), req)
+	c.Assert(err, gc.IsNil)
+
+	// Do assertions
+	// Query all the edges upto current time
+	iter, err := s.g.Edges(minUUID, maxUUID, time.Now())
+	c.Assert(err, gc.IsNil)
+
+	// Iterate the iterator and check if the edge1 ID is
+	// not found.
+	var edgeCount int
+	for iter.Next() {
+		edgeCount++
+		edge := iter.Edge()
+		c.Assert(edge.ID, gc.Not(gc.DeepEquals), edge1.ID, gc.Commentf("expected edge1 to be dropper"))
+	}
+
+	c.Assert(iter.Error(), gc.IsNil)
+	c.Assert(edgeCount, gc.Equals, 1)
+}

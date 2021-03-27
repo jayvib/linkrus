@@ -6,6 +6,8 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"linkrus/api/linkgraphapi/proto"
 	"linkrus/linkgraph/graph"
 	"time"
@@ -36,17 +38,14 @@ func (l *LinkGraphServer) UpsertLink(_ context.Context, req *proto.Link) (*proto
 	)
 
 	// Convert from ptypes.Timestamp to time
-	link.RetrievedAt, err = ptypes.Timestamp(req.RetrievedAt)
-	if err != nil {
-		return nil, err
-	}
+	link.RetrievedAt = req.RetrievedAt.AsTime()
 
 	// Upsert the link
 	if err = l.g.UpsertLink(&link); err != nil {
 		return nil, err
 	}
 
-	req.RetrievedAt = timeToProto(link.RetrievedAt)
+	req.RetrievedAt = timestamppb.New(link.RetrievedAt)
 	req.Url = link.URL
 	req.Uuid = link.ID[:]
 
@@ -72,8 +71,13 @@ func (l *LinkGraphServer) UpsertEdge(_ context.Context, req *proto.Edge) (*proto
 	return req, nil
 }
 
-func (l *LinkGraphServer) RemoveStaleEdges(ctx context.Context, query *proto.RemoveStaleEdgesQuery) (*empty.Empty, error) {
-	panic("implement me")
+func (l *LinkGraphServer) RemoveStaleEdges(_ context.Context, query *proto.RemoveStaleEdgesQuery) (*empty.Empty, error) {
+	updatedBefore := query.UpdatedBefore.AsTime()
+	err := l.g.RemoveStaleEdges(
+		uuidFromBytes(query.FromUuid),
+		updatedBefore,
+	)
+	return new(empty.Empty), err
 }
 
 func (l *LinkGraphServer) Links(r *proto.Range, server proto.LinkGraph_LinksServer) error {
@@ -83,6 +87,7 @@ func (l *LinkGraphServer) Links(r *proto.Range, server proto.LinkGraph_LinksServ
 	}
 
 	// Convert the bytes into UUID
+	logrus.Debug(r.FromUuid)
 	fromID, err := uuid.FromBytes(r.FromUuid)
 	if err != nil {
 		return err
@@ -120,7 +125,53 @@ func (l *LinkGraphServer) Links(r *proto.Range, server proto.LinkGraph_LinksServ
 }
 
 func (l *LinkGraphServer) Edges(r *proto.Range, server proto.LinkGraph_EdgesServer) error {
-	panic("implement me")
+
+	// Convert the proto.Timestamp to time.Time
+	updatedBefore, err := ptypes.Timestamp(r.Filter)
+	if err != nil && r.Filter != nil {
+		return err
+	}
+
+	// Convert the from UUID bytes to uuid.UUID
+	fromUUID, err := uuid.FromBytes(r.FromUuid)
+	if err != nil {
+		logrus.Debug("from err:", r.FromUuid, err)
+		return err
+	}
+
+	// Convert the to UUID bytes to uuid.UUID
+	toUUID, err := uuid.FromBytes(r.ToUuid)
+	if err != nil {
+		return err
+	}
+
+	iter, err := l.g.Edges(fromUUID, toUUID, updatedBefore)
+	if err != nil {
+		return err
+	}
+
+	defer func() { _ = iter.Close() }()
+
+	for iter.Next() {
+		next := iter.Edge()
+
+		err = server.Send(&proto.Edge{
+			Uuid:      next.ID[:],
+			SrcUuid:   next.Src[:],
+			DstUuid:   next.Dst[:],
+			UpdatedAt: timeToProto(next.UpdatedAt),
+		})
+
+		if err != nil {
+			return err
+		}
+	}
+
+	if iter.Error() != nil {
+		return err
+	}
+
+	return nil
 }
 
 func uuidFromBytes(b []byte) uuid.UUID {
