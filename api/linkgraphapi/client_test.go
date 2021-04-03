@@ -169,7 +169,11 @@ func (s *ClientTestSuite) TestEdges(c *gc.C) {
 	now := time.Now().Truncate(time.Second).UTC()
 	rpcCli.EXPECT().Edges(
 		gomock.AssignableToTypeOf(ctxWithCancel),
-		&proto.Range{FromUuid: minUUID[:], ToUuid: maxUUID[:], Filter: mustEncodeTimestamp(c, now)},
+		&proto.Range{
+			FromUuid: minUUID[:],
+			ToUuid:   maxUUID[:],
+			Filter:   mustEncodeTimestamp(c, now),
+		},
 	).Return(edgeStream, nil)
 
 	// Setup returns
@@ -180,8 +184,8 @@ func (s *ClientTestSuite) TestEdges(c *gc.C) {
 	updatedAt := time.Now().UTC()
 
 	returns := [][]interface{}{
-		{&proto.Edge{Uuid: uuid1[:], SrcUuid: srcID[:], DstUuid: dstID[:], UpdatedAt: mustEncodeTimestamp(c, updatedAt)}},
-		{&proto.Edge{Uuid: uuid2[:], SrcUuid: srcID[:], DstUuid: dstID[:], UpdatedAt: mustEncodeTimestamp(c, updatedAt)}},
+		{&proto.Edge{Uuid: uuid1[:], SrcUuid: srcID[:], DstUuid: dstID[:], UpdatedAt: mustEncodeTimestamp(c, updatedAt)}, nil},
+		{&proto.Edge{Uuid: uuid2[:], SrcUuid: srcID[:], DstUuid: dstID[:], UpdatedAt: mustEncodeTimestamp(c, updatedAt)}, nil},
 		{nil, io.EOF},
 	}
 
@@ -197,6 +201,40 @@ func (s *ClientTestSuite) TestEdges(c *gc.C) {
 	cli := linkgraphapi.NewLinkGraphClient(context.TODO(), rpcCli)
 	iter, err := cli.Edges(minUUID, maxUUID, now)
 	c.Assert(err, gc.IsNil)
-	_ = iter
 
+	var edgeCount int
+	for iter.Next() {
+		edgeCount++
+		next := iter.Edge()
+		if next.ID != uuid1 && next.ID != uuid2 {
+			c.Fatalf("unexpected link with ID %q", next.ID)
+		}
+		c.Assert(next.Src, gc.DeepEquals, srcID)
+		c.Assert(next.Dst, gc.DeepEquals, dstID)
+		c.Assert(next.UpdatedAt, gc.DeepEquals, updatedAt)
+	}
+
+	c.Assert(iter.Error(), gc.IsNil)
+	c.Assert(iter.Close(), gc.IsNil)
+	c.Assert(edgeCount, gc.Equals, 2)
+}
+
+func (s *ClientTestSuite) TestRetainVersionedEdges(c *gc.C) {
+	ctrl := gomock.NewController(c)
+	rpcCli := mocks.NewMockLinkGraphClient(ctrl)
+
+	from := uuid.New()
+	now := time.Now()
+
+	rpcCli.EXPECT().RemoveStaleEdges(
+		gomock.AssignableToTypeOf(context.TODO()),
+		&proto.RemoveStaleEdgesQuery{
+			FromUuid:      from[:],
+			UpdatedBefore: mustEncodeTimestamp(c, now),
+		},
+	)
+
+	cli := linkgraphapi.NewLinkGraphClient(context.TODO(), rpcCli)
+	err := cli.RemoveStaleEdges(from, now)
+	c.Assert(err, gc.IsNil)
 }

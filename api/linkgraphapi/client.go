@@ -101,6 +101,16 @@ func (c *LinkGraphClient) Edges(from, to uuid.UUID, before time.Time) (graph.Edg
 	return &edgeIterator{stream: stream, cancelFn: cancelFn}, nil
 }
 
+func (c *LinkGraphClient) RemoveStaleEdges(from uuid.UUID, updatedBefore time.Time) error {
+	req := &proto.RemoveStaleEdgesQuery{
+		FromUuid:      from[:],
+		UpdatedBefore: timeToProto(updatedBefore),
+	}
+
+	_, err := c.cli.RemoveStaleEdges(c.ctx, req)
+	return err
+}
+
 var _ graph.LinkIterator = (*linkIterator)(nil)
 
 type linkIterator struct {
