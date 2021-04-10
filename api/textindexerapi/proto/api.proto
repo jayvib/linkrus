@@ -4,6 +4,9 @@ package proto;
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 
+option go_package = ".;proto";
+
+// Document represents an indexed document.
 message Document {
   bytes link_id = 1;
   string url = 2;
@@ -12,21 +15,21 @@ message Document {
   google.protobuf.Timestamp indexed_at = 5;
 }
 
-message UpdateScoreRequest {
-  bytes link_id = 1;
-  double page_rank_score = 2;
-}
-
+// Query represents a search query.
 message Query {
   Type type = 1;
-  string expresion = 2;
+  string expression = 2;
+
   uint64 offset = 3;
+
   enum Type {
     MATCH = 0;
     PHRASE = 1;
   }
 }
 
+// QueryResult contains either the total count of results for a query or a
+// single document from the resultset.
 message QueryResult {
   oneof result {
     uint64 doc_count = 1;
@@ -34,8 +37,23 @@ message QueryResult {
   }
 }
 
+// UpdateScoreRequest encapsulates the parameters for the UpdateScore RPC.
+message UpdateScoreRequest {
+  bytes link_id = 1;
+  double page_rank_score = 2;
+}
+
 service TextIndexer {
+  // Index inserts a new document to the index or updates the index entry for
+  // and existing document.
   rpc Index(Document) returns (Document);
-  rpc UpdateScore(UpdateScoreRequest) returns (google.protobuf.Empty);
+
+  // Search the index for a particular query and stream the results back to 
+  // the client. The first response will include the total result count while
+  // all subsequent responses will include documents from the resultset.
   rpc Search(Query) returns (stream QueryResult);
+
+  // UpdateScore updates the PageRank score for a document with the specified
+  // link ID.
+  rpc UpdateScore(UpdateScoreRequest) returns (google.protobuf.Empty);
 }
