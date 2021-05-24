@@ -11,6 +11,9 @@ require (
 	github.com/golang/protobuf v1.4.3
 	github.com/google/uuid v1.1.5
 	github.com/hashicorp/go-multierror v1.1.0
+	github.com/juju/clock v0.0.0-20190205081909-9c5c9712527c
+	github.com/juju/errors v0.0.0-20200330140219-3fe23663418f // indirect
+	github.com/juju/loggo v0.0.0-20200526014432-9ce3a2e09b5e // indirect
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/lib/pq v1.9.0
 	github.com/microcosm-cc/bluemonday v1.0.4

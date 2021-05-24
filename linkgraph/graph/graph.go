@@ -6,6 +6,8 @@ import (
 	"github.com/google/uuid"
 )
 
+//go:generate mockgen -package mocks -destination mocks/mock_iterator.go . LinkIterator
+
 // Iterator is implemented by graph objects that can be iterated.
 type Iterator interface {
 	// Next advances the iterator. If no more items are available or an
